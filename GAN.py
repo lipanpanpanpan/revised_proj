@@ -9,6 +9,8 @@ from Discriminator import *
 from Generator import *
 from utils import TextLoader
 
+import time
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -19,10 +21,12 @@ def main():
     parser.add_argument('--model',type = str, default = 'lstm', help = 'Recurrent unit (rnn, gru, lstm)')
     parser.add_argument('--batch_size',type = int, default = 50, help = 'MiniBatch size')
     parser.add_argument('--seq_length',type = int, default = 50, help = 'RNN sequence length')
-    parser.add_argument('--num of epochs',type = int, default = 50, help = 'number of epochs')
+    parser.add_argument('--dis_seq_length',type = int, default = 100, help = 'RNN discriminator sequence length')
+    parser.add_argument('--num_epochs',type = int, default = 50, help = 'number of epochs')
     parser.add_argument('--save_frequency',type = int, default = 1000, help = 'save frequency')
     parser.add_argument('--disc_learning_rate', type=float, default=0.002,help= 'Discriminator learning rate')
     parser.add_argument('--gen_learning_rate', type=float, default=0.002,help= 'Generator learning rate')
+    parser.add_argument('--fc_hidden', type=int, default=500,help= 'Num hidden layer nodes for FC discriminator')
     parser.add_argument('--vocab_size', type = int, default = 1000, help = 'Size of vocabulary')
     parser.add_argument('--init_from', type=str, default=None,
                        help="""continue training from saved model at this path. Path must contain files saved by previous training process:
@@ -32,6 +36,7 @@ def main():
                                                   Note: this file contains absolute paths, be careful when moving files around;
                             'model.ckpt-*'      : file(s) with model definition (created by tf)
                         """)
+    
     args = parser.parse_args()
     train(args)
 
@@ -46,36 +51,42 @@ def train(args):
 
     Disc = Discriminator(args)
     Gen = Generator(args)
+#    D_tvars = [Disc.W1,Disc.W2]
+#    G_tvars = [Gen.weight]
     fp1 = open('G_loss_training','w')
     fp2 = open('D_loss_training','w')
 
 
-    with tf.Session as sess:
+    with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         saver = tf.train.Saver(tf.global_variables())
         if args.init_from is not None:
             saver.restore(sess, ckpt.model_checkpoint_path)
         for e in range(args.num_epochs):
+	    print str(e)+'th epoch'
             sess.run(tf.assign(Disc.lr, args.disc_learning_rate))
             sess.run(tf.assign(Gen.lr, args.gen_learning_rate))
             data_loader.reset_batch_pointer()
             for b in range(data_loader.num_batches):
                 start = time.time()
                 con,res = data_loader.next_batch()
-                real_data = np.concat(con,res)
-                fake_data = sess.run([Gen.generated_batch],feed_dict = {Gen.input_data = con})
+                real_data = np.concatenate((con,res),axis=1)
+                fake_data, G_tvars = sess.run([Fake_data,Gtvars],feed_dict = {Gen.input_data : con})
 
-                D_real, D_logit_real = sess.run([Disc.prob,Disc.logit], feed_dict = {Disc.input_data = real_data})
-                D_fake, D_logit_fake = sess.run([Disc.prob,Disc.logit], feed_dict = {Gen.input_data = fake_data})
+                D_real, D_logit_real, D_tvars = sess.run([prob,logit,Dtvars], feed_dict = {Disc.input_data : real_data})
+                D_fake, D_logit_fake = sess.run([prob,logit], feed_dict = {Disc.input_data : fake_data})
 
                 D_loss = -tf.reduce_mean(tf.log(D_real) + tf.log(1 - D_fake))
                 G_loss = -tf.reduce_mean(tf.log(D_fake))
 
-                D_solver = tf.train.AdamOptimizer(Disc.lr).minimize(D_loss, var_list = Disc.tvars)
-                G_solver = tf.train.AdamOptimizer(Gen.lr).minimize(G_loss, var_list = Gen.tvars)
+		t_vars = tf.trainable_variables()
+		D_tvars = [v for v in tf.global_variables() if v.name.startswith('disc')]
+		G_tvars = [v for v in tf.global_variables() if v.name.startswith('gen')]
+		D_solver = tf.train.AdamOptimizer(Disc.lr).minimize(D_loss, var_list = D_tvars)
+                G_solver = tf.train.AdamOptimizer(Gen.lr).minimize(G_loss, var_list = G_tvars)
 
-                _, d_loss = sess.run([D_solver, D_loss], feed_dict = {Disc.input_data = real_data, Gen.input_data = fake_data})
-                _, g_loss = sess.run([G_solver, G_loss], feed_dict = {Disc.input_data = real_data, Gen.input_data = fake_data})
+                _, d_loss = sess.run([D_solver, D_loss], feed_dict = {Disc.input_data : real_data, Gen.input_data : con})
+                _, g_loss = sess.run([G_solver, G_loss], feed_dict = {Disc.input_data : fake_data, Gen.input_data : con})
 
                 fp1.write(str(g_loss)+'\n')
                 fp2.write(str(d_loss)+'\n')

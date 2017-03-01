@@ -3,6 +3,8 @@
 import cPickle
 import os
 
+import numpy as np
+
 class TextLoader():
     def __init__(self, data_dir, batch_size, seq_length, encoding = 'utf-8'):
         self.data_dir = data_dir
@@ -22,7 +24,7 @@ class TextLoader():
         self.num_batches = int(self.tensor.size/(2*self.batch_size * self.seq_length))
 
     def create_batches(self):
-        if num_batches == 0:
+        if self.num_batches == 0:
             assert False, 'Not enough Data! Make seq_length and/or batch_size small'
         #self.tensor = self.tensor[:self.num_batches * self.batch_size * self.seq_length]
         context = self.tensor[0]
