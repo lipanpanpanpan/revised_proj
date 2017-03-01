@@ -11,6 +11,7 @@ from utils import TextLoader
 
 import time
 
+t_vars = tf.global_variables()
 
 def main():
     parser = argparse.ArgumentParser()
@@ -71,17 +72,17 @@ def train(args):
                 start = time.time()
                 con,res = data_loader.next_batch()
                 real_data = np.concatenate((con,res),axis=1)
-                fake_data, G_tvars = sess.run([Fake_data,Gtvars],feed_dict = {Gen.input_data : con})
+                fake_data = sess.run(Fake_data,feed_dict = {Gen.input_data : con})
 
-                D_real, D_logit_real, D_tvars = sess.run([prob,logit,Dtvars], feed_dict = {Disc.input_data : real_data})
+                D_real, D_logit_real= sess.run([prob,logit], feed_dict = {Disc.input_data : real_data})
                 D_fake, D_logit_fake = sess.run([prob,logit], feed_dict = {Disc.input_data : fake_data})
 
                 D_loss = -tf.reduce_mean(tf.log(D_real) + tf.log(1 - D_fake))
                 G_loss = -tf.reduce_mean(tf.log(D_fake))
 
-		t_vars = tf.trainable_variables()
-		D_tvars = [v for v in tf.global_variables() if v.name.startswith('disc')]
-		G_tvars = [v for v in tf.global_variables() if v.name.startswith('gen')]
+		
+		D_tvars = [v for v in t_vars if v.name.startswith('disc')]
+		G_tvars = [v for v in t_vars if v.name.startswith('gen')]
 		D_solver = tf.train.AdamOptimizer(Disc.lr).minimize(D_loss, var_list = D_tvars)
                 G_solver = tf.train.AdamOptimizer(Gen.lr).minimize(G_loss, var_list = G_tvars)
 
