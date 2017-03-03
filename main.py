@@ -34,7 +34,7 @@ def main():
                                                   Note: this file contains absolute paths, be careful when moving files around;
                             'model.ckpt-*'      : file(s) with model definition (created by tf)
                         """)
-    
+
     args = parser.parse_args()
     train(args)
 
@@ -44,11 +44,9 @@ def train(args):
   #      ckpt = tf.train.get_checkpoint_state(args.init_from)
   #      assert ckpt,"No checkpoint found"
   #      assert ckpt.model_checkpoint_path,"No model path found in checkpoint"
-
     with tf.Session() as sess:
-	sess.run(tf.global_variables_initializer())
         cGan = cGAN(sess,args)
-	cGan.GAN_train()
+	    cGan.GAN_train()
 
 if __name__ == '__main__':
     main()
