@@ -1,0 +1,3 @@
+to run
+
+python GAN.py --rnn_size 300 --model lstm --batch_size 186 --num_epochs 100000 --save_frequency 500 --vocab_size 5092 
