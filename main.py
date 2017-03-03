@@ -9,7 +9,6 @@ from utils import TextLoader
 from cGAN import cGAN
 import time
 
-t_vars = tf.global_variables()
 
 def main():
     parser = argparse.ArgumentParser()
@@ -23,8 +22,8 @@ def main():
     parser.add_argument('--dis_seq_length',type = int, default = 100, help = 'RNN discriminator sequence length')
     parser.add_argument('--num_epochs',type = int, default = 50, help = 'number of epochs')
     parser.add_argument('--save_frequency',type = int, default = 1000, help = 'save frequency')
-    parser.add_argument('--disc_learning_rate', type=float, default=0.002,help= 'Discriminator learning rate')
-    parser.add_argument('--gen_learning_rate', type=float, default=0.002,help= 'Generator learning rate')
+    parser.add_argument('--disc_learning_rate', type=float, default=0.02,help= 'Discriminator learning rate')
+    parser.add_argument('--gen_learning_rate', type=float, default=0.00001,help= 'Generator learning rate')
     parser.add_argument('--fc_hidden', type=int, default=500,help= 'Num hidden layer nodes for FC discriminator')
     parser.add_argument('--vocab_size', type = int, default = 1000, help = 'Size of vocabulary')
     parser.add_argument('--init_from', type=str, default=None,
@@ -47,6 +46,7 @@ def train(args):
   #      assert ckpt.model_checkpoint_path,"No model path found in checkpoint"
 
     with tf.Session() as sess:
+	sess.run(tf.global_variables_initializer())
         cGan = cGAN(sess,args)
 	cGan.GAN_train()
 
